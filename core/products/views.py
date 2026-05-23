@@ -17,6 +17,7 @@ from .permission import IsEditor
 #class ProductViewSet(ModelViewSet):
  #   queryset = Product.objects.all()
   #  serializer_class = ProductSerializer
+  #  permission_classes = [IsAuthenticatedOrReadOnly]
 
 def login_view(request):
     if request.method == "POST":
