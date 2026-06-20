@@ -8,10 +8,12 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import IsAdminUser
-from django.contrib.auth import authenticate, login
-from django.http import HttpResponse
+from django.contrib.auth import( authenticate, login ,logout)
+from django.http import HttpResponse, JsonResponse
 from django.middleware.csrf import get_token
 from .permission import IsEditor
+from django.views.decorators.csrf import ensure_csrf_cookie
+from rest_framework import status
 
 
 #class ProductViewSet(ModelViewSet):
@@ -19,43 +21,91 @@ from .permission import IsEditor
   #  serializer_class = ProductSerializer
   #  permission_classes = [IsAuthenticatedOrReadOnly]
 
-def login_view(request):
-    if request.method == "POST":
-        user = authenticate(
-            request,
-            username=request.POST.get("username"),
-            password=request.POST.get("password")
-        )
-        if user:
-            login(request, user)
-            return HttpResponse("Logged in ")
-        else:
-            return HttpResponse("Invalid credentials ")
+#def login_view(request):
+#    if request.method == "POST":
+#        user = authenticate(
+ #           request,
+  #          username=request.POST.get("username"),
+   #         password=request.POST.get("password")
+    #    )
+     #   if user:
+      #      login(request, user)
+    #        return HttpResponse("Logged in ")
+     #   else:
+      #      return HttpResponse("Invalid credentials ")
 
-    csrf_token = get_token(request)
+    #csrf_token = get_token(request)
 
-    return HttpResponse(f"""
-        <html>
-            <body>
-                <h2>Login</h2>
-                <form method="post">
-                    <input type="hidden" name="csrfmiddlewaretoken" value="{csrf_token}">
-                    <input type="text" name="username" placeholder="Username"><br><br>
-                    <input type="password" name="password" placeholder="Password"><br><br>                    
-                    <button type="submit">Login</button>
-                </form>
-            </body>
-        </html>
-    """)
+   # return HttpResponse(f"""
+    #    <html>
+     #       <body>
+      #          <h2>Login</h2>
+       #         <form method="post">
+        #            <input type="hidden" name="csrfmiddlewaretoken" value="{csrf_token}">
+         #           <input type="text" name="username" placeholder="Username"><br><br>
+          #          <input type="password" name="password" placeholder="Password"><br><br>                    
+           #         <button type="submit">Login</button>
+            #    </form>
+   #         </body>
+    #    </html>
+    #""")
+#=========================
+#csrf cookie view
+#=========================
+@ensure_csrf_cookie
 @api_view(['GET'])
+def get_csrf_token(request):
+    return JsonResponse({'message': 'CSRF cookie set'})
+
+#=========================
+#login view
+#=========================
+
+@api_view(['POST'])
+def login_view(request):
+    username = request.data.get('username')
+    password = request.data.get('password')
+
+    user = authenticate(request, username=username, password=password)
+    if user is not None:
+        login(request, user)
+        return Response({
+            'message': 'Logged in successfully',
+            'isAdmin': user.is_superuser,
+            })
+    return Response({'message': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
+#=========================
+#logout view
+#=========================
+@api_view(['POST'])
+def logout_view(request):
+    logout(request)
+    return Response({'message': 'Logged out successfully'})
+#=========================
+#chek auth
+#=========================
+@api_view(['GET'])
+def check_auth(request):
+    if request.user.is_authenticated:
+        return Response({'isAuthenticated': request.user.is_authenticated, 'isAdmin': request.user.is_staff})
+    else:
+        return Response({'isAuthenticated': False})
+#=========================
+#get products 
+#=========================
+
+
+@api_view(['GET'])
 def product_list(request):
     products = Product.objects.all()
     serializer = ProductSerializer(products, many=True)
     return Response(serializer.data)
 
-# CREATE
+#=========================
+#CREATE
+#=========================
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_product(request):
@@ -65,7 +115,9 @@ def create_product(request):
         return Response(serializer.data, status=201)
     return Response(serializer.errors, status=400)
 
-# UPDATE
+#=========================
+#UPDATE
+#=========================
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_product(request, id):
@@ -91,21 +143,21 @@ def delete_product(request, id):
 
     product.delete()
     return Response(status=204)
-@api_view(['GET','PUT'])
-@permission_classes([IsEditor])
-def get_or_update_product(request, id):
-    try:
-        product = Product.objects.get(id=id)
-    except Product.DoesNotExist:
-        return Response({'error': 'Product not found'}, status=404)
+#@api_view(['GET','PUT'])
+#@permission_classes([IsEditor])
+#def get_or_update_product(request, id):
+ #   try:
+  #      product = Product.objects.get(id=id)
+   # except Product.DoesNotExist:
+    #    return Response({'error': 'Product not found'}, status=404)
 
-    if request.method == 'GET':
-        serializer = ProductSerializer(product,context={'request': request})
-        return Response(serializer.data)
+    #if request.method == 'GET':
+     #   serializer = ProductSerializer(product,context={'request': request})
+      #  return Response(serializer.data)
 
-    if request.method == 'PUT':
-        serializer = ProductSerializer(product, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=400)
+    #if request.method == 'PUT':
+       # serializer = ProductSerializer(product, data=request.data)
+     #   if serializer.is_valid():
+      #      serializer.save()
+       #     return Response(serializer.data)
+        #return Response(serializer.errors, status=400)

@@ -12,11 +12,13 @@ from . import views
     #path('product_update/<int:id>/', views.ProductViewSet.as_view({'put': 'update'}), name='update-product'),
     #path('product_delete/<int:id>/', views.ProductViewSet.as_view({'delete': 'destroy'}), name='delete-product'),]
 urlpatterns = [
+    path('csrf/', views.get_csrf_token,),
     path('product/', views.product_list, name='product_list'),
     path('create_product/', views.create_product),
     path('update_product/<int:id>/',views.update_product,name='update_product'),
     path('delete_product/<int:id>/',views.delete_product,name='delete_product'),
     path('login/', views.login_view, name='login'),
     path('product/<int:id>/getorput', views.get_or_update_product, name='get_or_update_product'),
-
+    path('logout/', views.logout_view, name='logout'),
+    path('check_auth/', views.check_auth, name='check_auth'),
 ]
